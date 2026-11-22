@@ -85,6 +85,9 @@ Download the latest `Streambert Setup *.exe` from the [Releases](https://codeber
 ### macOS
 Download the latest `Streambert-*-universal.dmg` from the [Releases](https://codeberg.org/truelockmc/streambert/releases/latest) page, open it and drag Streambert to your Applications folder.
 
+### Samsung TV (Tizen)
+A remote-friendly TV version lives in [`tizen/`](tizen/README.md). It has browsing, search, My List, resume positions, and ad-free anime through its own player. Movies and series play in the hosters' embedded players, and there are no downloads. You build it yourself and install it on the TV in Developer Mode, as described in [tizen/README.md](tizen/README.md).
+
 ---
 
 
