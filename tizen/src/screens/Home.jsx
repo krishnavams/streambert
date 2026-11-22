@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { fetchHomeRows, fetchPage, fetchGenres, imgUrl, BROWSE_LANGUAGES } from "../lib/tmdb";
 import { usePaged } from "../lib/usePaged";
+import { buildSuggestions } from "../lib/suggest";
 import { getHistory, getMyList, getProgress, progressFraction } from "../lib/library";
 import { Row, Spinner, Chips } from "../components/ui";
 import { ensureFocus } from "../nav/spatial";
@@ -25,6 +26,19 @@ export default function Home({ token, active, nav }) {
   const [history, setHistory] = useState(getHistory);
   const [myList, setMyList] = useState(getMyList);
   const [genres, setGenres] = useState([]);
+  const [suggestions, setSuggestions] = useState({ topPicks: [], because: [] });
+
+  // rebuild suggestions when the recent history changes (e.g. after watching)
+  const historyKey = history.slice(0, 6).map((h) => `${h.type}:${h.id}`).join(",");
+  useEffect(() => {
+    let cancelled = false;
+    buildSuggestions(token)
+      .then((s) => !cancelled && setSuggestions(s))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [historyKey, token]);
 
   useEffect(() => {
     fetchGenres("movie", token).then(setGenres, () => setGenres([]));
@@ -95,9 +109,16 @@ export default function Home({ token, active, nav }) {
         subtitleFor={epLabel}
         progressFor={(h) => progressFraction(getProgress(h, h.season, h.episode))}
       />
+      <Row title="Top picks for you" items={suggestions.topPicks} onSelect={nav.details} />
       <Row title="My List" items={myList} onSelect={nav.details} />
+      {suggestions.because.slice(0, 1).map((b) => (
+        <Row key={`because-${b.source.type}:${b.source.id}`} title={b.title} items={b.items} onSelect={nav.details} />
+      ))}
       {rows.slice(0, 3).map((r) => (
         <EndlessRow key={r.id} row={r} token={token} onSelect={nav.details} />
+      ))}
+      {suggestions.because.slice(1).map((b) => (
+        <Row key={`because-${b.source.type}:${b.source.id}`} title={b.title} items={b.items} onSelect={nav.details} />
       ))}
       <Chips
         title="Movies by genre"

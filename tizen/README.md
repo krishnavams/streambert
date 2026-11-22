@@ -11,6 +11,7 @@ for the TV remote.
 |---|---|
 | Home rows (trending, popular, top rated, anime, in cinemas) that keep loading as you scroll right | ✅ |
 | "Movies by genre" and "Movies by language" shortcuts on Home | ✅ |
+| "Top picks for you" and "Because you watched …" rows built from your watch history (TMDB recommendations; the history stays on the TV) | ✅ |
 | Browse the whole catalog: Movies / Series / Anime × genre × year or decade × original language × sort (popular, top rated, newest, most voted), endless grid | ✅ |
 | Search with an on-screen keyboard, endless results | ✅ |
 | Subtitle language for embedded players that support it (VidSrc, Vidfast, Vidrift), in Settings or the player | ✅ |
