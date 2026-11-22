@@ -4,3 +4,6 @@ download_config.ini
 dist/
 *.zip
 *secret.txt
+
+# Samsung TV build: may contain your TMDB token
+tizen/.env

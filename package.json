@@ -19,7 +19,11 @@
     "dist:arch": "cross-env ELECTRON_DIST=1 vite build && electron-builder --linux pacman --publish never",
     "dist:appimage": "cross-env ELECTRON_DIST=1 vite build && electron-builder --linux AppImage --publish never",
     "dist:win": "cross-env ELECTRON_DIST=1 vite build && electron-builder --win --publish never",
-    "dist:mac": "cross-env ELECTRON_DIST=1 vite build && electron-builder --mac --universal --publish never"
+    "dist:mac": "cross-env ELECTRON_DIST=1 vite build && electron-builder --mac --universal --publish never",
+    "tv:dev": "vite --config tizen/vite.config.js",
+    "tv:build": "vite build --config tizen/vite.config.js",
+    "tv:package": "npm run tv:build && tizen package -t wgt -s streambert -- tizen/dist",
+    "tv:install": "tizen install -n Streambert.wgt -- tizen/dist"
   },
   "dependencies": {
     "approve": "^0.0.12",
