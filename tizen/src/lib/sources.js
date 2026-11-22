@@ -16,6 +16,7 @@ import { storage } from "@shared/storage";
 const K_SOURCE = "tv_source";
 const K_ANIME_SOURCE = "tv_animeSource";
 const K_DUB = "hianimeDubMode";
+const K_SUB_LANG = "tv_subLang";
 
 export const HIANIME = "hianime";
 
@@ -27,8 +28,44 @@ export function sourcesFor(item) {
     if (s.tag) return false; // other anime-only scrapers need the desktop app
     if (item.type === "tv" && sourceIsMovieOnly(s.id)) return false;
     return true;
-  }).map((s) => ({ id: s.id, label: s.label }));
+  }).map((s) => ({ id: s.id, label: s.label, hint: sourceHint(s) }));
 }
+
+// "Multi Lang", "🇩🇪 German audio", "direct stream, no ads", …
+export function sourceHint(src) {
+  if (src.id === HIANIME) return "anime, no ads, sub/dub";
+  const note = (src.note || "").replace(/,?\s*Anime ✓/, "").trim();
+  const flags = { "🇩🇪": "German audio", "🇫🇷": "French audio", "🇷🇺": "Russian audio" };
+  if (flags[note]) return flags[note];
+  if (/multi lang/i.test(note)) return "multiple audio languages";
+  return src.langParam ? "subtitle language selectable" : "";
+}
+
+export const sourceSupportsSubLang = (id) =>
+  !!(PLAYER_SOURCES.find((s) => s.id === id) || {}).langParam;
+
+// Subtitle language passed to embedded players that support it ("" = player default)
+export const SUB_LANGUAGES = [
+  { id: "", label: "Player default" },
+  { id: "en", label: "English" },
+  { id: "hi", label: "Hindi" },
+  { id: "te", label: "Telugu" },
+  { id: "ta", label: "Tamil" },
+  { id: "ml", label: "Malayalam" },
+  { id: "es", label: "Spanish" },
+  { id: "fr", label: "French" },
+  { id: "de", label: "German" },
+  { id: "it", label: "Italian" },
+  { id: "pt", label: "Portuguese" },
+  { id: "ar", label: "Arabic" },
+  { id: "tr", label: "Turkish" },
+  { id: "ko", label: "Korean" },
+  { id: "ja", label: "Japanese" },
+  { id: "zh", label: "Chinese" },
+];
+export const getSubLang = () => storage.get(K_SUB_LANG) || "";
+export const setSubLang = (id) => storage.set(K_SUB_LANG, id || "");
+export const subLangLabel = (id) => (SUB_LANGUAGES.find((l) => l.id === id) || SUB_LANGUAGES[0]).label;
 
 export function preferredSource(item) {
   const key = item.anime ? K_ANIME_SOURCE : K_SOURCE;
@@ -60,7 +97,7 @@ export async function embedUrl(sourceId, item, season, episode, token) {
   const idType = sourceIdType(sourceId);
   if (idType === "imdb") id = await fetchImdbId(item.type, item.id, token);
   else if (idType === "kinopoisk") id = await fetchKinopoiskId(item.type, item.id, token);
-  const url = getSourceUrl(sourceId, item.type, id, season, episode, {}, "#e50914", null);
+  const url = getSourceUrl(sourceId, item.type, id, season, episode, {}, "#e50914", getSubLang() || null);
   if (!url) throw new Error(`${sourceLabel(sourceId)} can't play this title`);
   return url;
 }

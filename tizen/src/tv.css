@@ -916,3 +916,83 @@ code {
 .player-error .btn-row {
   justify-content: center;
 }
+
+/* ── Endless lists & browse ──────────────────────────────────────────────── */
+.card-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 20.25rem;
+}
+
+.grid-loading {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 2rem 0 3rem;
+}
+
+.browse-head {
+  padding: 3rem 3.5rem 0;
+}
+
+.browse-head .page-title {
+  padding: 0 0 1rem;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.filters > * {
+  margin: 0 1rem 1rem 0;
+}
+
+.filter-btn {
+  display: inline-flex;
+  align-items: center;
+  height: 3.6rem;
+  padding: 0 1.5rem;
+  border-radius: 0.6rem;
+  background: var(--surface2);
+  font-size: 1.3rem;
+}
+
+.filter-btn .filter-name {
+  color: var(--text2);
+  margin-right: 0.6rem;
+}
+
+.filter-btn.set {
+  box-shadow: inset 0 0 0 0.15rem var(--red);
+}
+
+.filter-btn:focus {
+  background: var(--focus);
+  color: #000;
+}
+
+.filter-btn:focus .filter-name {
+  color: #444;
+}
+
+.segment {
+  display: flex;
+  margin-right: 1.6rem;
+}
+
+.segment .chip {
+  margin-right: 0.5rem;
+}
+
+.browse-count {
+  color: var(--text2);
+  font-size: 1.2rem;
+  margin: 0.4rem 0 0;
+}
+
+.browse-grid {
+  padding: 0 2.5rem;
+}

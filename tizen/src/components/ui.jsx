@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { imgUrl } from "../lib/tmdb";
-import { focusFirst } from "../nav/spatial";
+import { focusFirst, focusEl, ensureFocus } from "../nav/spatial";
 import { useKeys } from "../nav/useKeys";
 
 export function Spinner({ label }) {
@@ -13,7 +13,7 @@ export function Spinner({ label }) {
 }
 
 // Poster card. `progress` (0..1) draws a resume bar.
-export function Card({ item, onSelect, progress = 0, subtitle, wide = false }) {
+export function Card({ item, onSelect, onFocus, progress = 0, subtitle, wide = false }) {
   const img = wide
     ? imgUrl(item.backdrop_path || item.poster_path, "w780")
     : imgUrl(item.poster_path || item.backdrop_path, "w342");
@@ -22,6 +22,7 @@ export function Card({ item, onSelect, progress = 0, subtitle, wide = false }) {
       type="button"
       className={`card focusable${wide ? " card-wide" : ""}`}
       onClick={() => onSelect(item)}
+      onFocus={onFocus}
     >
       <div className="card-img">
         {img ? (
@@ -42,42 +43,89 @@ export function Card({ item, onSelect, progress = 0, subtitle, wide = false }) {
   );
 }
 
-export function Row({ title, items, onSelect, wide = false, progressFor, subtitleFor }) {
+// Horizontal row. `onNearEnd` is called when focus gets close to the last
+// card, so endless rows can fetch the next page.
+export function Row({ title, items, onSelect, wide = false, progressFor, subtitleFor, onNearEnd, loading = false }) {
   if (!items || !items.length) return null;
   return (
     <section className="row">
       <h2 className="row-title">{title}</h2>
       <div className="row-scroll" data-nav-group data-nav-axis="horizontal">
-        {items.map((item) => (
+        {items.map((item, i) => (
           <Card
             key={`${item.type}:${item.id}`}
             item={item}
             onSelect={onSelect}
+            onFocus={onNearEnd && i >= items.length - 6 ? onNearEnd : undefined}
             wide={wide}
             progress={progressFor ? progressFor(item) : 0}
             subtitle={subtitleFor ? subtitleFor(item) : null}
           />
+        ))}
+        {loading ? <div className="card card-loading"><div className="spinner" /></div> : null}
+      </div>
+    </section>
+  );
+}
+
+// Grid of cards (flex-wrap: CSS grid needs Chromium 57+). `onNearEnd` fires
+// when focus reaches the last couple of rows.
+export function Grid({ items, onSelect, progressFor, subtitleFor, onNearEnd, loading = false }) {
+  return (
+    <div className="grid">
+      {items.map((item, i) => (
+        <Card
+          key={`${item.type}:${item.id}`}
+          item={item}
+          onSelect={onSelect}
+          onFocus={onNearEnd && i >= items.length - 14 ? onNearEnd : undefined}
+          progress={progressFor ? progressFor(item) : 0}
+          subtitle={subtitleFor ? subtitleFor(item) : null}
+        />
+      ))}
+      {loading ? (
+        <div className="grid-loading">
+          <div className="spinner" />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+// Horizontal chip row (genres, filters)
+export function Chips({ title, options, selected, onPick }) {
+  return (
+    <section className="row">
+      {title ? <h2 className="row-title">{title}</h2> : null}
+      <div className="row-scroll chips" data-nav-group data-nav-axis="horizontal">
+        {options.map((o) => (
+          <button
+            key={o.id}
+            type="button"
+            className={`chip focusable${o.id === selected ? " selected" : ""}`}
+            onClick={() => onPick(o)}
+          >
+            {o.label}
+          </button>
         ))}
       </div>
     </section>
   );
 }
 
-// Grid of cards (flex-wrap: CSS grid needs Chromium 57+)
-export function Grid({ items, onSelect, progressFor, subtitleFor }) {
-  return (
-    <div className="grid">
-      {items.map((item) => (
-        <Card
-          key={`${item.type}:${item.id}`}
-          item={item}
-          onSelect={onSelect}
-          progress={progressFor ? progressFor(item) : 0}
-          subtitle={subtitleFor ? subtitleFor(item) : null}
-        />
-      ))}
-    </div>
-  );
+// Focus the modal on open; give focus back to the button that opened it on close
+function useModalFocus(ref) {
+  useEffect(() => {
+    const opener = document.activeElement;
+    const t = setTimeout(() => focusFirst(ref.current), 0);
+    return () => {
+      clearTimeout(t);
+      setTimeout(() => {
+        if (opener && opener.isConnected && opener.offsetParent !== null) focusEl(opener);
+        else ensureFocus();
+      }, 0);
+    };
+  }, []);
 }
 
 /**
@@ -86,10 +134,7 @@ export function Grid({ items, onSelect, progressFor, subtitleFor }) {
  */
 export function Picker({ title, options, selected, onPick, onClose }) {
   const ref = useRef(null);
-  useEffect(() => {
-    const t = setTimeout(() => focusFirst(ref.current), 0);
-    return () => clearTimeout(t);
-  }, []);
+  useModalFocus(ref);
   useKeys((action) => {
     if (action === "back") {
       onClose();
@@ -123,10 +168,7 @@ export function Picker({ title, options, selected, onPick, onClose }) {
 
 export function Confirm({ title, text, confirmLabel = "OK", cancelLabel = "Cancel", onConfirm, onCancel }) {
   const ref = useRef(null);
-  useEffect(() => {
-    const t = setTimeout(() => focusFirst(ref.current), 0);
-    return () => clearTimeout(t);
-  }, []);
+  useModalFocus(ref);
   useKeys((action) => {
     if (action === "back") {
       onCancel();

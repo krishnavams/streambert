@@ -9,8 +9,11 @@ for the TV remote.
 
 | Feature | TV app |
 |---|---|
-| Home (trending, popular, top rated, anime, in cinemas) | ✅ |
-| Search with an on-screen keyboard | ✅ |
+| Home rows (trending, popular, top rated, anime, in cinemas) that keep loading as you scroll right | ✅ |
+| "Movies by genre" and "Movies by language" shortcuts on Home | ✅ |
+| Browse the whole catalog: Movies / Series / Anime × genre × year or decade × original language × sort (popular, top rated, newest, most voted), endless grid | ✅ |
+| Search with an on-screen keyboard, endless results | ✅ |
+| Subtitle language for embedded players that support it (VidSrc, Vidfast, Vidrift), in Settings or the player | ✅ |
 | Movie / series pages, seasons & episodes, recommendations | ✅ |
 | My List, recently watched, resume positions | ✅ (stored on the TV) |
 | Anime via HiAnime, ad-free in the app's own player (sub/dub, subtitles, auto next episode) | ✅ |
@@ -95,6 +98,7 @@ tizen/
     platform.js       Tizen key registration, key mapping, app exit
     nav/spatial.js    spatial focus navigation (rows, sidebar, modals)
     nav/useKeys.js    per-screen key handlers
-    lib/              TMDB, HiAnime (browser port), sources, library storage
-    screens/          Home, Search, Details, Player, Library, Settings, Setup
+    lib/              TMDB, HiAnime (browser port), sources, library storage,
+                      usePaged (endless lists)
+    screens/          Home, Search, Browse, Details, Player, Library, Settings, Setup
 ```

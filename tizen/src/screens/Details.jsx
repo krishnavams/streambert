@@ -3,7 +3,7 @@ import { fetchDetails, fetchSeason, imgUrl } from "../lib/tmdb";
 import { getHistory, getProgress, progressFraction, resumeTime, isInMyList, toggleMyList, mediaKey } from "../lib/library";
 import { sourcesFor, preferredSource, setPreferredSource, sourceLabel, getDubMode, setDubMode, HIANIME } from "../lib/sources";
 import { Row, Spinner, Picker } from "../components/ui";
-import { ensureFocus, focusFirst } from "../nav/spatial";
+import { ensureFocus } from "../nav/spatial";
 import { PlayIcon, BookmarkIcon, BookmarkFillIcon, SourceIcon } from "@components/Icons";
 
 const fmtRuntime = (m) => (m ? `${Math.floor(m / 60) ? `${Math.floor(m / 60)}h ` : ""}${m % 60}m` : null);
@@ -192,20 +192,15 @@ export default function Details({ token, active, nav, params }) {
       {picker === "source" ? (
         <Picker
           title="Player source"
-          options={sources.map((s) => ({
-            ...s,
-            hint: s.id === HIANIME ? "direct stream, no ads" : "embedded player",
-          }))}
+          options={sources}
           selected={source}
           onClose={() => {
             setPicker(null);
-            setTimeout(() => focusFirst(), 0);
           }}
           onPick={(id) => {
             setPreferredSource(item, id);
             setSource(id);
             setPicker(null);
-            setTimeout(() => focusFirst(), 0);
           }}
         />
       ) : null}
@@ -219,13 +214,11 @@ export default function Details({ token, active, nav, params }) {
           selected={dub}
           onClose={() => {
             setPicker(null);
-            setTimeout(() => focusFirst(), 0);
           }}
           onPick={(m) => {
             setDubMode(m);
             setDub(m);
             setPicker(null);
-            setTimeout(() => focusFirst(), 0);
           }}
         />
       ) : null}

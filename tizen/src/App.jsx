@@ -11,12 +11,13 @@ import { Confirm, Toast } from "./components/ui";
 import Setup from "./screens/Setup";
 import Home from "./screens/Home";
 import Search from "./screens/Search";
+import Browse from "./screens/Browse";
 import Details from "./screens/Details";
 import Player from "./screens/Player";
 import Library from "./screens/Library";
 import Settings from "./screens/Settings";
 
-const TABS = ["home", "search", "library", "settings"];
+const TABS = ["home", "search", "browse", "library", "settings"];
 let _key = 0;
 const entry = (name, params = {}) => ({ key: ++_key, name, params });
 
@@ -76,6 +77,8 @@ export default function App() {
       back,
       tab: (name) => setStack([entry(name)]),
       details: (item, extra = {}) => push("details", { item, ...extra }),
+      // Browse with preset filters (e.g. a genre chip on Home)
+      browse: (filters) => push("browse", { filters }),
       // play(item) → movie, or the series' last watched / first episode
       play: (item, season, episode, episodes) => {
         if (item.type === "tv" && !season) {
@@ -158,6 +161,8 @@ export default function App() {
         return <Home {...common} />;
       case "search":
         return <Search {...common} />;
+      case "browse":
+        return <Browse key={e.key} {...common} />;
       case "library":
         return <Library {...common} />;
       case "settings":
@@ -190,7 +195,7 @@ export default function App() {
             className={`screen${e.name === "player" ? " screen-player" : ""}`}
             style={{ display: i === stack.length - 1 ? "" : "none" }}
           >
-            {isRoot || e.name === "details" ? (
+            {isRoot || e.name === "details" || e.name === "browse" ? (
               <Sidebar current={isRoot ? rootTab : null} onSelect={nav.tab} />
             ) : null}
             <main className={e.name === "player" ? "" : "content"}>{renderScreen(e, active)}</main>

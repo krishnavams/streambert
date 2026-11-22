@@ -116,17 +116,21 @@ export function ensureFocus(page) {
   else focusFirst(scope);
 }
 
-// Nearest element from `fr` in direction `dir` among `pool`
+// Nearest element from `fr` in direction `dir` among `pool`.
+// Two steps: first the nearest "band" in that direction (the next row when
+// moving up/down, the next column when moving left/right), then the element
+// in that band closest to where focus is now. Without the band step a short
+// row (a few chips on the left) could be skipped for a longer one below it.
 function pick(pool, from, fr, dir) {
   const fcx = fr.left + fr.width / 2;
   const fcy = fr.top + fr.height / 2;
-  let best = null;
-  let bestScore = Infinity;
+  const vertical = dir === "up" || dir === "down";
+  const scored = [];
   for (const el of pool) {
     if (el === from || el.contains(from) || from.contains(el)) continue;
     const r = el.getBoundingClientRect();
     let primary, secondary;
-    if (dir === "left" || dir === "right") {
+    if (!vertical) {
       primary = dir === "right" ? r.left - fr.right : fr.left - r.right;
       if (primary < -fr.width / 2) continue;
       const overlap = Math.min(fr.bottom, r.bottom) - Math.max(fr.top, r.top);
@@ -137,16 +141,44 @@ function pick(pool, from, fr, dir) {
       const overlap = Math.min(fr.right, r.right) - Math.max(fr.left, r.left);
       secondary = overlap > 0 ? 0 : Math.abs(r.left + r.width / 2 - fcx);
     }
-    const score = Math.max(primary, 0) + secondary * 3;
-    if (score < bestScore) {
-      bestScore = score;
-      best = el;
-    }
+    scored.push({ el, primary: Math.max(primary, 0), secondary });
   }
-  return best;
+  if (!scored.length) return null;
+
+  // horizontal moves keep the old weighting (rows already line up)
+  if (!vertical) {
+    let best = scored[0];
+    for (const c of scored) {
+      if (c.primary + c.secondary * 3 < best.primary + best.secondary * 3) best = c;
+    }
+    return best.el;
+  }
+  let nearest = Infinity;
+  for (const c of scored) nearest = Math.min(nearest, c.primary);
+  const band = nearest + 24; // px of slack for slightly uneven rows
+  let best = null;
+  for (const c of scored) {
+    if (c.primary > band) continue;
+    if (!best || c.secondary < best.secondary || (c.secondary === best.secondary && c.primary < best.primary)) best = c;
+  }
+  return best.el;
 }
 
 const axisOf = (g) => (g ? g.getAttribute("data-nav-axis") : null);
+
+// Is the element inside the visible part of its horizontally scrolled row?
+// Cards scrolled out of a row are reachable by moving along that row, but
+// jumping into the row from elsewhere must land on a card you can see.
+function inRowView(el) {
+  const row = el.closest('[data-nav-axis="horizontal"]');
+  if (!row) return true;
+  const r = el.getBoundingClientRect();
+  const cr = row.getBoundingClientRect();
+  // not tucked under the side menu either (content starts right of it)
+  const content = el.closest("main.content");
+  const minLeft = content ? content.getBoundingClientRect().left : 0;
+  return r.right > cr.left + 20 && r.left < cr.right - 20 && r.left >= minLeft;
+}
 
 export function move(dir) {
   const scope = currentScope();
@@ -175,6 +207,16 @@ export function move(dir) {
       pool = pool.filter((el) => axisOf(groupOf(el)) !== "horizontal");
     }
   }
+  // a vertical menu (the sidebar) is only entered sideways
+  if (!horizontal) {
+    pool = pool.filter((el) => {
+      const g = groupOf(el);
+      return g === fromGroup || axisOf(g) !== "vertical";
+    });
+  }
+  // the sidebar sits at the left edge: nothing further left
+  if (axis === "vertical" && dir === "left") return false;
+  pool = pool.filter((el) => (fromGroup && fromGroup.contains(el)) || inRowView(el));
   if (!best) best = pick(pool, from, fr, dir);
   if (!best) return false;
 

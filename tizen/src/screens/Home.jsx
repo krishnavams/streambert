@@ -1,9 +1,20 @@
 import { useEffect, useState } from "react";
-import { fetchHomeRows, imgUrl } from "../lib/tmdb";
+import { fetchHomeRows, fetchPage, fetchGenres, imgUrl, BROWSE_LANGUAGES } from "../lib/tmdb";
+import { usePaged } from "../lib/usePaged";
 import { getHistory, getMyList, getProgress, progressFraction } from "../lib/library";
-import { Row, Spinner } from "../components/ui";
+import { Row, Spinner, Chips } from "../components/ui";
 import { ensureFocus } from "../nav/spatial";
 import { PlayIcon } from "@components/Icons";
+
+// A TMDB row that keeps loading pages while you scroll right
+function EndlessRow({ row, token, onSelect }) {
+  const list = usePaged(row.path, (page) => fetchPage(row.path, page, token, row.type), row);
+  return (
+    <Row title={row.title} items={list.items} onSelect={onSelect} onNearEnd={list.loadMore} loading={list.loading} />
+  );
+}
+
+const LANGUAGE_CHIPS = BROWSE_LANGUAGES.filter((l) => l.id);
 
 const epLabel = (h) => (h.type === "tv" && h.season ? `S${h.season} · E${h.episode}` : null);
 
@@ -13,6 +24,11 @@ export default function Home({ token, active, nav }) {
   // re-read local lists whenever the screen comes back to the top
   const [history, setHistory] = useState(getHistory);
   const [myList, setMyList] = useState(getMyList);
+  const [genres, setGenres] = useState([]);
+
+  useEffect(() => {
+    fetchGenres("movie", token).then(setGenres, () => setGenres([]));
+  }, [token]);
 
   useEffect(() => {
     let cancelled = false;
@@ -80,9 +96,27 @@ export default function Home({ token, active, nav }) {
         progressFor={(h) => progressFraction(getProgress(h, h.season, h.episode))}
       />
       <Row title="My List" items={myList} onSelect={nav.details} />
-      {rows.map((r) => (
-        <Row key={r.id} title={r.title} items={r.items} onSelect={nav.details} />
+      {rows.slice(0, 3).map((r) => (
+        <EndlessRow key={r.id} row={r} token={token} onSelect={nav.details} />
       ))}
+      <Chips
+        title="Movies by genre"
+        options={genres}
+        onPick={(g) => nav.browse({ kind: "movie", genre: g.id })}
+      />
+      <Chips
+        title="Movies by language"
+        options={LANGUAGE_CHIPS}
+        onPick={(l) => nav.browse({ kind: "movie", language: l.id })}
+      />
+      {rows.slice(3).map((r) => (
+        <EndlessRow key={r.id} row={r} token={token} onSelect={nav.details} />
+      ))}
+      <div className="btn-row" style={{ padding: "2rem 3.5rem" }}>
+        <button type="button" className="btn focusable" onClick={() => nav.tab("browse")}>
+          Browse all movies & series
+        </button>
+      </div>
     </div>
   );
 }

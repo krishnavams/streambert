@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { HomeIcon, SearchIcon, BookmarkIcon, SettingsIcon } from "@components/Icons";
+import { HomeIcon, SearchIcon, BookmarkIcon, SettingsIcon, FilmIcon } from "@components/Icons";
 import logoUrl from "../../../public/logo.svg";
 
 const TABS = [
   { id: "search", label: "Search", Icon: SearchIcon },
   { id: "home", label: "Home", Icon: HomeIcon },
+  { id: "browse", label: "Browse", Icon: FilmIcon },
   { id: "library", label: "My List", Icon: BookmarkIcon },
   { id: "settings", label: "Settings", Icon: SettingsIcon },
 ];

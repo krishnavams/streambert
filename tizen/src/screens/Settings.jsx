@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { PLAYER_SOURCES, clearTmdbCache } from "@shared/api";
 import { storage } from "@shared/storage";
-import { getDefaultSource, setDefaultSource, getDubMode, setDubMode, sourceLabel, HIANIME } from "../lib/sources";
+import { getDefaultSource, setDefaultSource, getDubMode, setDubMode, sourceLabel, sourceHint, HIANIME, SUB_LANGUAGES, getSubLang, setSubLang, subLangLabel } from "../lib/sources";
 import { clearHistory } from "../lib/library";
 import { Picker, Confirm } from "../components/ui";
-import { ensureFocus, focusFirst } from "../nav/spatial";
+import { ensureFocus } from "../nav/spatial";
 import { isTizen } from "../platform";
 
 const LANGUAGES = [
@@ -33,12 +33,12 @@ export default function Settings({ active, onResetToken }) {
     setPicker(null);
     setConfirm(null);
     bump((n) => n + 1);
-    setTimeout(() => focusFirst(), 0);
   };
 
   const lang = storage.get("tmdbLang") || "en-US";
-  const embedSources = PLAYER_SOURCES.filter((s) => !s.tag).map((s) => ({ id: s.id, label: s.label }));
-  const animeSources = [{ id: HIANIME, label: "HiAnime", hint: "direct stream, no ads" }, ...embedSources];
+  const embedSources = PLAYER_SOURCES.filter((s) => !s.tag).map((s) => ({ id: s.id, label: s.label, hint: sourceHint(s) }));
+  const hianime = PLAYER_SOURCES.find((s) => s.id === HIANIME);
+  const animeSources = (hianime ? [{ id: HIANIME, label: hianime.label, hint: sourceHint(hianime) }] : []).concat(embedSources);
 
   const rows = [
     {
@@ -58,6 +58,12 @@ export default function Settings({ active, onResetToken }) {
       label: "Anime audio",
       value: getDubMode() === "dub" ? "Dub" : "Sub",
       onClick: () => setPicker("dub"),
+    },
+    {
+      id: "subLang",
+      label: "Subtitle language (embedded players)",
+      value: subLangLabel(getSubLang()),
+      onClick: () => setPicker("subLang"),
     },
     {
       id: "lang",
@@ -109,6 +115,18 @@ export default function Settings({ active, onResetToken }) {
           onClose={close}
           onPick={(m) => {
             setDubMode(m);
+            close();
+          }}
+        />
+      ) : null}
+      {picker === "subLang" ? (
+        <Picker
+          title="Subtitle language"
+          options={SUB_LANGUAGES}
+          selected={getSubLang()}
+          onClose={close}
+          onPick={(id) => {
+            setSubLang(id);
             close();
           }}
         />

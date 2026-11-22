@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { search } from "../lib/tmdb";
+import { usePaged } from "../lib/usePaged";
 import { Grid, Spinner } from "../components/ui";
 import { ensureFocus } from "../nav/spatial";
 
@@ -8,31 +9,23 @@ const KEYS = "abcdefghijklmnopqrstuvwxyz1234567890".split("");
 
 export default function Search({ token, active, nav }) {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const seq = useRef(0);
+  const [debounced, setDebounced] = useState("");
 
   useEffect(() => {
     if (active) setTimeout(ensureFocus, 0);
   }, [active]);
 
+  // wait until typing pauses before searching
   useEffect(() => {
     const q = query.trim();
-    if (q.length < 2) {
-      setResults(null);
-      setLoading(false);
-      return undefined;
-    }
-    const id = ++seq.current;
-    setLoading(true);
-    const t = setTimeout(() => {
-      search(q, token)
-        .then((r) => id === seq.current && setResults(r))
-        .catch(() => id === seq.current && setResults([]))
-        .finally(() => id === seq.current && setLoading(false));
-    }, 450);
+    const t = setTimeout(() => setDebounced(q.length >= 2 ? q : ""), 450);
     return () => clearTimeout(t);
-  }, [query, token]);
+  }, [query]);
+
+  const list = usePaged(debounced || null, (page) => search(debounced, token, page));
+  const pending = query.trim().length >= 2 && query.trim() !== debounced;
+  const loading = pending || (list.loading && !list.items.length);
+  const results = debounced && !pending ? list.items : null;
 
   const type = (ch) => setQuery((q) => (q + ch).slice(0, 60));
 
@@ -59,11 +52,11 @@ export default function Search({ token, active, nav }) {
       </div>
       <div className="search-results">
         {loading ? <Spinner /> : null}
-        {!loading && results && results.length === 0 ? (
+        {!loading && results && results.length === 0 && list.page > 0 ? (
           <div className="empty">No results for “{query.trim()}”</div>
         ) : null}
         {!loading && results && results.length ? (
-          <Grid items={results} onSelect={nav.details} />
+          <Grid items={results} onSelect={nav.details} onNearEnd={list.loadMore} loading={list.loading} />
         ) : null}
         {!results && !loading ? (
           <div className="empty">Type at least two letters.</div>

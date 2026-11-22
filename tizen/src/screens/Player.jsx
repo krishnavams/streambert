@@ -14,7 +14,7 @@ import { useKeys } from "../nav/useKeys";
 import { focusFirst } from "../nav/spatial";
 import { Spinner, Picker } from "../components/ui";
 import { resolveHiAnime } from "../lib/hianime";
-import { embedUrl, sourcesFor, preferredSource, setPreferredSource, sourceLabel, fallbackEmbedSource, getDubMode, setDubMode, HIANIME } from "../lib/sources";
+import { embedUrl, sourcesFor, preferredSource, setPreferredSource, sourceLabel, fallbackEmbedSource, getDubMode, setDubMode, HIANIME, SUB_LANGUAGES, getSubLang, setSubLang, subLangLabel, sourceSupportsSubLang } from "../lib/sources";
 import { getProgress, resumeTime, saveProgress, recordWatch } from "../lib/library";
 
 const HAND_OVER_SECONDS = 15;
@@ -34,6 +34,7 @@ export default function Player({ token, nav, params }) {
   const isTv = item.type === "tv";
   const [source, setSource] = useState(() => params.source || preferredSource(item));
   const [dub, setDub] = useState(getDubMode);
+  const [subLang, setSubLangState] = useState(getSubLang);
   const [mode, setMode] = useState(null); // "hls" | "embed"
   const [url, setUrl] = useState(null);
   const [subtitle, setSubtitle] = useState(null);
@@ -100,7 +101,7 @@ export default function Player({ token, nav, params }) {
     return () => {
       cancelled = true;
     };
-  }, [source, dub, item.id, season, episode]);
+  }, [source, dub, subLang, item.id, season, episode]);
 
   // ── hls.js wiring ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -430,6 +431,11 @@ export default function Player({ token, nav, params }) {
                   Control player
                 </button>
               )}
+              {mode === "embed" && sourceSupportsSubLang(source) ? (
+                <button type="button" className="btn focusable" onClick={() => setPicker("subLang")}>
+                  Subtitles: {subLangLabel(subLang)}
+                </button>
+              ) : null}
               {nextEpisode ? (
                 <button type="button" className="btn focusable" onClick={goNext}>
                   Next episode ▸
@@ -456,14 +462,24 @@ export default function Player({ token, nav, params }) {
           title="Player source"
           options={sources}
           selected={source}
-          onClose={() => {
-            setPicker(null);
-            setTimeout(() => focusFirst(rootRef.current), 0);
-          }}
+          onClose={() => setPicker(null)}
           onPick={(id) => {
             setPicker(null);
             setPreferredSource(item, id);
             setSource(id);
+          }}
+        />
+      ) : null}
+      {picker === "subLang" ? (
+        <Picker
+          title="Subtitle language"
+          options={SUB_LANGUAGES}
+          selected={subLang}
+          onClose={() => setPicker(null)}
+          onPick={(id) => {
+            setPicker(null);
+            setSubLang(id);
+            setSubLangState(id); // reloads the embedded player with the new language
           }}
         />
       ) : null}
@@ -475,10 +491,7 @@ export default function Player({ token, nav, params }) {
             { id: "dub", label: "English dub (Dub)" },
           ]}
           selected={dub}
-          onClose={() => {
-            setPicker(null);
-            setTimeout(() => focusFirst(rootRef.current), 0);
-          }}
+          onClose={() => setPicker(null)}
           onPick={(m) => {
             setPicker(null);
             setDubMode(m);
