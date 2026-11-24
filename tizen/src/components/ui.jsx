@@ -1,7 +1,25 @@
 import { useEffect, useRef } from "react";
-import { imgUrl } from "../lib/tmdb";
+import { imgUrl, getToken } from "../lib/tmdb";
+import { useAllowed, getAgeLimit } from "../lib/parental";
 import { focusFirst, focusEl, ensureFocus } from "../nav/spatial";
 import { useKeys } from "../nav/useKeys";
+
+// With an age limit on, a page of results can shrink to almost nothing. Keep
+// loading pages (a few at a time) until there is enough to show or none are left.
+function useAutoLoadMore(items, pending, loading, onNearEnd, want) {
+  const tries = useRef(0);
+  useEffect(() => {
+    if (getAgeLimit() === null || !onNearEnd || pending || loading) return;
+    if (items.length >= want) {
+      tries.current = 0;
+      return;
+    }
+    if (tries.current < 8) {
+      tries.current++;
+      onNearEnd();
+    }
+  }, [items.length, pending, loading]);
+}
 
 export function Spinner({ label }) {
   return (
@@ -45,8 +63,11 @@ export function Card({ item, onSelect, onFocus, progress = 0, subtitle, wide = f
 
 // Horizontal row. `onNearEnd` is called when focus gets close to the last
 // card, so endless rows can fetch the next page.
-export function Row({ title, items, onSelect, wide = false, progressFor, subtitleFor, onNearEnd, loading = false }) {
-  if (!items || !items.length) return null;
+export function Row({ title, items: allItems, onSelect, wide = false, progressFor, subtitleFor, onNearEnd, loading = false }) {
+  // hide titles above the age limit (no-op when the limit is off)
+  const { items, pending } = useAllowed(allItems, getToken());
+  useAutoLoadMore(items, pending, loading, onNearEnd, 8);
+  if (!items.length) return null;
   return (
     <section className="row">
       <h2 className="row-title">{title}</h2>
@@ -70,7 +91,9 @@ export function Row({ title, items, onSelect, wide = false, progressFor, subtitl
 
 // Grid of cards (flex-wrap: CSS grid needs Chromium 57+). `onNearEnd` fires
 // when focus reaches the last couple of rows.
-export function Grid({ items, onSelect, progressFor, subtitleFor, onNearEnd, loading = false }) {
+export function Grid({ items: allItems, onSelect, progressFor, subtitleFor, onNearEnd, loading = false }) {
+  const { items, pending } = useAllowed(allItems, getToken());
+  useAutoLoadMore(items, pending, loading, onNearEnd, 14);
   return (
     <div className="grid">
       {items.map((item, i) => (

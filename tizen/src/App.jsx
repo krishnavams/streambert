@@ -8,6 +8,8 @@ import { getToken, setToken } from "./lib/tmdb";
 import { getHistory, mediaKey } from "./lib/library";
 import Sidebar from "./components/Sidebar";
 import { Confirm, Toast } from "./components/ui";
+import PinPad from "./components/PinPad";
+import { getAgeLimit, checkTitle, checkPin, unlockTitle } from "./lib/parental";
 import Setup from "./screens/Setup";
 import Home from "./screens/Home";
 import Search from "./screens/Search";
@@ -72,26 +74,41 @@ export default function App() {
     return () => clearTimeout(t);
   }, [top.key]);
 
+  // Age limit: open a title only if its rating is within the limit,
+  // otherwise ask for the PIN first.
+  const [blocked, setBlocked] = useState(null); // { item, minAge, proceed }
+  const gate = useCallback(
+    (item, proceed) => {
+      if (getAgeLimit() === null) return proceed();
+      return checkTitle(item, getToken()).then((r) => {
+        if (r.allowed) proceed();
+        else setBlocked({ item, minAge: r.minAge, proceed });
+      });
+    },
+    [],
+  );
+
   const nav = useMemo(
     () => ({
       back,
       tab: (name) => setStack([entry(name)]),
-      details: (item, extra = {}) => push("details", { item, ...extra }),
+      details: (item, extra = {}) => gate(item, () => push("details", { item, ...extra })),
       // Browse with preset filters (e.g. a genre chip on Home)
       browse: (filters) => push("browse", { filters }),
       // play(item) → movie, or the series' last watched / first episode
-      play: (item, season, episode, episodes) => {
-        if (item.type === "tv" && !season) {
-          const last = getHistory().find((h) => mediaKey(h) === mediaKey(item));
-          season = last?.season || 1;
-          episode = last?.episode || 1;
-        }
-        push("player", { item, season, episode, episodes });
-      },
+      play: (item, season, episode, episodes) =>
+        gate(item, () => {
+          if (item.type === "tv" && !season) {
+            const last = getHistory().find((h) => mediaKey(h) === mediaKey(item));
+            season = last?.season || 1;
+            episode = last?.episode || 1;
+          }
+          push("player", { item, season, episode, episodes });
+        }),
       replacePlayer: (params) =>
         setStack((s) => [...s.slice(0, -1), entry("player", params)]),
     }),
-    [push, back],
+    [push, back, gate],
   );
 
   // ── Remote keys ─────────────────────────────────────────────────────────────
@@ -203,6 +220,21 @@ export default function App() {
         );
       })}
       <Toast message={toast} />
+      {blocked ? (
+        <PinPad
+          title="Blocked by age limit"
+          text={`“${blocked.item.title}” ${blocked.minAge === null ? "has no known age rating" : `is rated ${blocked.minAge}+`}. Enter the PIN to open it once.`}
+          onSubmit={(pin) => {
+            if (!checkPin(pin)) return "Wrong PIN. Try again.";
+            const b = blocked;
+            unlockTitle(b.item);
+            setBlocked(null);
+            b.proceed();
+            return null;
+          }}
+          onCancel={() => setBlocked(null)}
+        />
+      ) : null}
       {confirmExit ? (
         <Confirm
           title="Exit Streambert?"

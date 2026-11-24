@@ -22,6 +22,7 @@ const REMOTE_KEYS = [
   "ColorF1Green",
   "ColorF2Yellow",
   "ColorF3Blue",
+  "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", // PIN entry
 ];
 
 export function registerRemoteKeys() {
@@ -75,6 +76,11 @@ const CODE_ACTIONS = {
   65376: "imeDone",
   65385: "imeCancel",
 };
+// number keys (remote and keyboard, plain and numpad) → "digit:N"
+for (let n = 0; n <= 9; n++) {
+  CODE_ACTIONS[48 + n] = `digit:${n}`;
+  CODE_ACTIONS[96 + n] = `digit:${n}`;
+}
 
 const KEY_ACTIONS = {
   ArrowLeft: "left",
