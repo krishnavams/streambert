@@ -64,13 +64,17 @@ export default defineConfig({
     target: "chrome56",
     cssTarget: "chrome56",
     modulePreload: false,
+    // One real CSS file linked from index.html. Tizen's default content
+    // security policy (style-src 'self') blocks <style> tags injected by JS.
+    cssCodeSplit: false,
     assetsInlineLimit: 0,
     rollupOptions: {
       output: {
         format: "iife",
         inlineDynamicImports: true,
         entryFileNames: "assets/app.js",
-        assetFileNames: "assets/[name][extname]",
+        assetFileNames: (info) =>
+          /\.css$/.test(info.name || "") ? "assets/app.css" : "assets/[name][extname]",
       },
     },
   },

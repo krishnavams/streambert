@@ -10,6 +10,9 @@
     <!-- lets the app call TMDB, AniList and HiAnime without CORS restrictions -->
     <access origin="*" subdomains="true"/>
     <tizen:allow-navigation>*</tizen:allow-navigation>
+    <!-- Without this Tizen applies "script-src 'self'; style-src 'self'; default-src *",
+         which blocks blob: video (hls.js / MSE), data: images and inline style changes. -->
+    <tizen:content-security-policy>default-src 'self'; script-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src * data: blob:; media-src * data: blob:; font-src 'self' data:; connect-src *; frame-src *; child-src * blob:; worker-src 'self' blob:</tizen:content-security-policy>
     <tizen:privilege name="http://tizen.org/privilege/internet"/>
     <tizen:privilege name="http://tizen.org/privilege/tv.inputdevice"/>
     <tizen:profile name="tv-samsung"/>
