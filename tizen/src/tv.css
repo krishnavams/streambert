@@ -997,6 +997,50 @@ code {
   padding: 0 2.5rem;
 }
 
+/* ── PIN pad ─────────────────────────────────────────────────────────────── */
+.pin-modal {
+  width: 38rem;
+  text-align: center;
+}
+
+.pin-dots {
+  display: flex;
+  justify-content: center;
+  margin: 0.4rem 0 0.6rem;
+}
+
+.pin-dot {
+  width: 1.6rem;
+  height: 1.6rem;
+  margin: 0 0.8rem;
+  border-radius: 50%;
+  border: 0.2rem solid var(--text2);
+}
+
+.pin-dot.on {
+  background: var(--red);
+  border-color: var(--red);
+}
+
+.pin-error {
+  min-height: 1.8rem;
+  margin-bottom: 1rem;
+  color: #ff5a5f;
+  font-size: 1.2rem;
+}
+
+.pin-keys {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.pin-key {
+  width: 8.6rem;
+  margin: 0 0.5rem 0.5rem 0;
+  font-size: 2rem;
+}
+
 /* invisible strip along the top of an embedded player: pointing the mouse
    there shows the player controls */
 .player-hotzone {

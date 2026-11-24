@@ -4,6 +4,7 @@ import { usePaged } from "../lib/usePaged";
 import { buildSuggestions } from "../lib/suggest";
 import { getHistory, getMyList, getProgress, progressFraction } from "../lib/library";
 import { Row, Spinner, Chips } from "../components/ui";
+import { useAllowed } from "../lib/parental";
 import { ensureFocus } from "../nav/spatial";
 import { PlayIcon } from "@components/Icons";
 
@@ -64,10 +65,13 @@ export default function Home({ token, active, nav }) {
     if (active && rows) setTimeout(ensureFocus, 0);
   }, [active, rows]);
 
+  // featured title: the first one allowed by the age limit
+  const heroPool = useAllowed(rows && rows[0] ? rows[0].items : null, token).items;
+
   if (error) return <div className="empty">Could not load TMDB: {error}</div>;
   if (!rows) return <Spinner label="Loading…" />;
 
-  const hero = rows[0]?.items.find((i) => i.backdrop_path) || null;
+  const hero = heroPool.find((i) => i.backdrop_path) || null;
 
   return (
     <div className="page">

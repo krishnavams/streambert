@@ -4,6 +4,8 @@ import { storage } from "@shared/storage";
 import { getDefaultSource, setDefaultSource, getDubMode, setDubMode, sourceLabel, sourceHint, HIANIME, SUB_LANGUAGES, getSubLang, setSubLang, subLangLabel } from "../lib/sources";
 import { clearHistory } from "../lib/library";
 import { Picker, Confirm } from "../components/ui";
+import PinPad from "../components/PinPad";
+import { AGE_LIMITS, getAgeLimit, setAgeLimit, ageLimitLabel, hasPin, checkPin, setPin } from "../lib/parental";
 import { ensureFocus } from "../nav/spatial";
 import { isTizen } from "../platform";
 
@@ -24,10 +26,42 @@ export default function Settings({ active, onResetToken }) {
   const [, bump] = useState(0);
   const [picker, setPicker] = useState(null);
   const [confirm, setConfirm] = useState(null);
+  // PIN flows: { t: "verify", then: "picker" | "changepin" } | { t: "create", pin1, limit }
+  const [flow, setFlow] = useState(null);
 
   useEffect(() => {
     if (active) setTimeout(ensureFocus, 0);
   }, [active]);
+
+  const openAgeLimit = () => {
+    if (getAgeLimit() === null) setPicker("ageLimit");
+    else setFlow({ t: "verify", then: "picker" });
+  };
+
+  // returns an error message, or null when the PIN is accepted
+  const submitPin = (pin) => {
+    if (flow.t === "verify") {
+      if (!checkPin(pin)) return "Wrong PIN. Try again.";
+      const then = flow.then;
+      setFlow(then === "changepin" ? { t: "create", pin1: null, limit: null } : null);
+      if (then === "picker") setPicker("ageLimit");
+      return null;
+    }
+    // create: type it twice
+    if (!flow.pin1) {
+      setFlow({ ...flow, pin1: pin });
+      return null;
+    }
+    if (pin !== flow.pin1) {
+      setFlow({ ...flow, pin1: null });
+      return "The PINs didn't match. Start again.";
+    }
+    setPin(pin);
+    if (flow.limit !== null) setAgeLimit(flow.limit);
+    setFlow(null);
+    bump((n) => n + 1);
+    return null;
+  };
 
   const close = () => {
     setPicker(null);
@@ -71,6 +105,15 @@ export default function Settings({ active, onResetToken }) {
       value: (LANGUAGES.find((l) => l[0] === lang) || [lang, lang])[1],
       onClick: () => setPicker("lang"),
     },
+    {
+      id: "age",
+      label: "Age limit (PIN protected)",
+      value: ageLimitLabel(),
+      onClick: openAgeLimit,
+    },
+    ...(getAgeLimit() !== null
+      ? [{ id: "pin", label: "Change PIN", value: "", onClick: () => setFlow({ t: "verify", then: "changepin" }) }]
+      : []),
     { id: "history", label: "Clear watch history", value: "", onClick: () => setConfirm("history") },
     { id: "token", label: "Change TMDB token", value: "", onClick: () => setConfirm("token") },
   ];
@@ -129,6 +172,40 @@ export default function Settings({ active, onResetToken }) {
             setSubLang(id);
             close();
           }}
+        />
+      ) : null}
+      {picker === "ageLimit" ? (
+        <Picker
+          title="Age limit"
+          options={[{ id: "off", label: "Off", hint: "show everything (adult titles stay hidden)" }].concat(AGE_LIMITS)}
+          selected={getAgeLimit() === null ? "off" : String(getAgeLimit())}
+          onClose={close}
+          onPick={(id) => {
+            setPicker(null);
+            if (id === "off") {
+              setAgeLimit(null);
+              setPin(null);
+              bump((n) => n + 1);
+            } else if (hasPin()) {
+              setAgeLimit(Number(id));
+              bump((n) => n + 1);
+            } else {
+              setFlow({ t: "create", pin1: null, limit: Number(id) });
+            }
+          }}
+        />
+      ) : null}
+      {flow ? (
+        <PinPad
+          key={flow.t + (flow.pin1 ? "2" : "1")}
+          title={flow.t === "verify" ? "Enter your PIN" : flow.pin1 ? "Repeat the PIN" : "Create a 4-digit PIN"}
+          text={
+            flow.t === "create" && !flow.pin1
+              ? "You'll need it to change the age limit or to open blocked titles. Titles with no known rating are hidden."
+              : null
+          }
+          onSubmit={submitPin}
+          onCancel={() => setFlow(null)}
         />
       ) : null}
       {picker === "lang" ? (

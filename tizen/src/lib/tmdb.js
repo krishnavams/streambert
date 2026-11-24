@@ -34,11 +34,13 @@ export function normalize(raw, forcedType) {
     year: date ? date.slice(0, 4) : null,
     rating: raw.vote_average ? Math.round(raw.vote_average * 10) / 10 : null,
     anime: isAnimeContent(raw),
+    adult: !!raw.adult,
   };
 }
 
+// Adult-flagged titles are dropped from every list, whatever endpoint it came from.
 const list = (data, type) =>
-  (data?.results || []).map((r) => normalize(r, type)).filter(Boolean);
+  (data?.results || []).map((r) => normalize(r, type)).filter((i) => i && !i.adult);
 
 export async function fetchHomeRows(token) {
   const defs = [

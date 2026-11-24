@@ -106,6 +106,7 @@ export default function Browse({ token, active, nav, params }) {
           <FilterBtn onOpen={setPicker} id="year" name="Year" value={label(years, filters.year, "Any")} isSet={!!filters.year} />
           {!isAnime ? (
             <FilterBtn
+              onOpen={setPicker}
               id="language"
               name="Language"
               value={label(BROWSE_LANGUAGES, filters.language, "Any")}

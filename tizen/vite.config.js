@@ -38,7 +38,7 @@ function tizenPackage() {
       this.emitFile({
         type: "asset",
         fileName: "icon.png",
-        source: fs.readFileSync(path.join(REPO, "public", "icon.png")),
+        source: fs.readFileSync(path.join(ROOT, "icon.png")),
       });
     },
   };
