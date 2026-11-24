@@ -996,3 +996,18 @@ code {
 .browse-grid {
   padding: 0 2.5rem;
 }
+
+/* invisible strip along the top of an embedded player: pointing the mouse
+   there shows the player controls */
+.player-hotzone {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6rem;
+  z-index: 5;
+}
+
+.player:focus {
+  outline: none;
+}

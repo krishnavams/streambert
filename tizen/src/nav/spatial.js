@@ -186,6 +186,9 @@ export function move(dir) {
   if (!from || from === document.body || !scope.contains(from) || !isVisible(from)) {
     return focusFirst(scope);
   }
+  // focus parked on a container (e.g. the player taking focus back from an
+  // embedded video) → go to the first real control
+  if (!from.classList.contains("focusable")) return focusFirst(scope);
   const fr = from.getBoundingClientRect();
   let pool = candidates(scope);
   const fromGroup = groupOf(from);

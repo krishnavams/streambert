@@ -233,6 +233,36 @@ export default function Player({ token, nav, params }) {
   };
   useEffect(() => () => clearInterval(handTimer.current), []);
 
+  // A mouse/pointer click inside the embedded player moves keyboard focus into
+  // it, and from then on the TV sends every key there, Back included. Unless
+  // the remote was handed over on purpose ("Control player"), take focus back
+  // right away. The click itself still reaches the player.
+  useEffect(() => {
+    if (mode !== "embed") return undefined;
+    let timer = null;
+    const reclaim = () => {
+      timer = null;
+      if (handTimer.current) return; // deliberate hand-over, its countdown handles it
+      if (document.activeElement !== iframeRef.current) return;
+      const root = rootRef.current;
+      if (!root) return;
+      try {
+        root.focus({ preventScroll: true });
+      } catch {
+        root.focus();
+      }
+    };
+    const onBlur = () => {
+      clearTimeout(timer);
+      timer = setTimeout(reclaim, 600);
+    };
+    window.addEventListener("blur", onBlur);
+    return () => {
+      window.removeEventListener("blur", onBlur);
+      clearTimeout(timer);
+    };
+  }, [mode]);
+
   // ── HLS helpers ─────────────────────────────────────────────────────────────
   const togglePlay = () => {
     const v = videoRef.current;
@@ -333,7 +363,7 @@ export default function Player({ token, nav, params }) {
   const pct = time.d ? (time.t / time.d) * 100 : 0;
 
   return (
-    <div className="player" ref={rootRef} data-nav-scope>
+    <div className="player" ref={rootRef} data-nav-scope tabIndex={-1} onMouseMove={showControls}>
       {mode === "hls" && url ? (
         <video
           ref={videoRef}
@@ -346,6 +376,7 @@ export default function Player({ token, nav, params }) {
           }}
           onPlay={() => setPaused(false)}
           onEnded={() => (nextEpisode ? goNext() : nav.back())}
+          onClick={togglePlay}
         >
           {subtitle ? <track kind="subtitles" src={subtitle} srcLang="en" label="English" default /> : null}
         </video>
@@ -362,6 +393,12 @@ export default function Player({ token, nav, params }) {
           allowFullScreen
           referrerPolicy="origin"
         />
+      ) : null}
+
+      {/* mouse over the top edge brings back Exit / Source (the iframe itself
+          never reports mouse moves to the app) */}
+      {mode === "embed" && url && !(controls && !handOver) ? (
+        <div className="player-hotzone" onMouseMove={showControls} onClick={showControls} />
       ) : null}
 
       {!url && !error ? <Spinner label={stage} /> : null}
