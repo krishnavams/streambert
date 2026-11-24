@@ -16,6 +16,27 @@ import { Spinner, Picker } from "../components/ui";
 import { resolveHiAnime } from "../lib/hianime";
 import { embedUrl, sourcesFor, preferredSource, setPreferredSource, sourceLabel, fallbackEmbedSource, getDubMode, setDubMode, HIANIME, SUB_LANGUAGES, getSubLang, setSubLang, subLangLabel, sourceSupportsSubLang } from "../lib/sources";
 import { getProgress, resumeTime, saveProgress, recordWatch } from "../lib/library";
+import { storage } from "@shared/storage";
+
+const K_QUALITY = "tv_quality"; // "auto" or a height such as "1080"
+
+// Lock hls.js to the best level at or below `q` ("auto" = adaptive).
+// Picks the highest-bitrate level of the chosen height.
+function applyQuality(hls, q) {
+  if (!hls) return;
+  if (q === "auto") {
+    hls.currentLevel = -1;
+    return;
+  }
+  const want = parseInt(q, 10);
+  const heights = Array.from(new Set(hls.levels.map((l) => l.height).filter(Boolean))).sort((a, b) => b - a);
+  const height = heights.find((h) => h <= want) || heights[heights.length - 1];
+  let best = -1;
+  hls.levels.forEach((l, i) => {
+    if (l.height === height && (best < 0 || l.bitrate > hls.levels[best].bitrate)) best = i;
+  });
+  hls.currentLevel = best;
+}
 
 const HAND_OVER_SECONDS = 15;
 const CONTROLS_HIDE_MS = 5000;
@@ -47,7 +68,13 @@ export default function Player({ token, nav, params }) {
   const [paused, setPaused] = useState(false);
   const [time, setTime] = useState({ t: 0, d: 0 });
   const [subsOn, setSubsOn] = useState(true);
+  const [heights, setHeights] = useState([]); // qualities offered by the stream, best first
+  const [quality, setQuality] = useState(() => storage.get(K_QUALITY) || "auto");
+  const [curHeight, setCurHeight] = useState(0); // what is playing right now
 
+  const hlsRef = useRef(null);
+  const qualityRef = useRef(quality);
+  qualityRef.current = quality;
   const videoRef = useRef(null);
   const iframeRef = useRef(null);
   const rootRef = useRef(null);
@@ -116,6 +143,16 @@ export default function Player({ token, nav, params }) {
     };
     if (Hls.isSupported()) {
       hls = new Hls({ maxBufferLength: 30, backBufferLength: 30 });
+      hlsRef.current = hls;
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        const hs = Array.from(new Set(hls.levels.map((l) => l.height).filter(Boolean))).sort((a, b) => b - a);
+        setHeights(hs);
+        applyQuality(hls, qualityRef.current);
+      });
+      hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => {
+        const l = hls.levels[data.level];
+        setCurHeight(l ? l.height || 0 : 0);
+      });
       hls.on(Hls.Events.ERROR, (_, data) => {
         if (!data.fatal) return;
         if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
@@ -133,6 +170,9 @@ export default function Player({ token, nav, params }) {
     return () => {
       video.removeEventListener("loadedmetadata", onMeta);
       if (hls) hls.destroy();
+      hlsRef.current = null;
+      setHeights([]);
+      setCurHeight(0);
       video.removeAttribute("src");
       try {
         video.load();
@@ -425,6 +465,11 @@ export default function Player({ token, nav, params }) {
                   <button type="button" className="btn focusable" onClick={() => setPicker("audio")}>
                     {dub === "dub" ? "Dub" : "Sub"}
                   </button>
+                  {heights.length > 1 ? (
+                    <button type="button" className="btn focusable" onClick={() => setPicker("quality")}>
+                      Quality: {quality === "auto" ? `Auto${curHeight ? ` (${curHeight}p)` : ""}` : `${quality}p`}
+                    </button>
+                  ) : null}
                 </>
               ) : (
                 <button type="button" className="btn btn-primary focusable" data-nav-default onClick={giveRemote}>
@@ -480,6 +525,22 @@ export default function Player({ token, nav, params }) {
             setPicker(null);
             setSubLang(id);
             setSubLangState(id); // reloads the embedded player with the new language
+          }}
+        />
+      ) : null}
+      {picker === "quality" ? (
+        <Picker
+          title="Video quality"
+          options={[{ id: "auto", label: "Auto", hint: "adapts to your Wi-Fi speed" }].concat(
+            heights.map((h) => ({ id: String(h), label: `${h}p`, hint: h >= 1080 ? "best, needs fast Wi-Fi" : "" })),
+          )}
+          selected={quality}
+          onClose={() => setPicker(null)}
+          onPick={(q) => {
+            setPicker(null);
+            storage.set(K_QUALITY, q);
+            setQuality(q);
+            applyQuality(hlsRef.current, q);
           }}
         />
       ) : null}
